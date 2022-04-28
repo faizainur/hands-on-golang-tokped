@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	pb "github.com/faizainur/cryptos/cryptos_pb"
+	pb "github.com/faizainur/hands-on-golang/cryptos/cryptos_pb"
 	"google.golang.org/grpc"
 )
 
@@ -29,6 +29,10 @@ func RegisterGrpcServer(grpcServer *grpc.Server, s *Server) {
 }
 
 func (s *Server) EncryptData(ctx context.Context, in *CryptoRequest) (*CryptoResponse, error) {
+	if len(in.GetData()) < 1 {
+		return nil, fmt.Errorf("%s", "Bad request")
+	}
+
 	block, err := aes.NewCipher(s.Key)
 	if err != nil {
 		fmt.Errorf("Error : ", err.Error())
@@ -55,6 +59,9 @@ func (s *Server) EncryptData(ctx context.Context, in *CryptoRequest) (*CryptoRes
 }
 
 func (s *Server) DecryptData(ctx context.Context, in *CryptoRequest) (*CryptoResponse, error) {
+	if len(in.GetData()) < 1 {
+		return nil, fmt.Errorf("%s", "Bad request")
+	}
 	block, err := aes.NewCipher(s.Key)
 	if err != nil {
 		fmt.Errorf("Error : ", err.Error())
@@ -69,7 +76,9 @@ func (s *Server) DecryptData(ctx context.Context, in *CryptoRequest) (*CryptoRes
 
 	nonce := in.GetData()[:gcm.NonceSize()]
 	chipertext := in.GetData()[gcm.NonceSize():]
-	plaintext, err := gcm.Open(nonce, nonce, chipertext, nil)
+
+	var plaintext []byte
+	plaintext, err = gcm.Open(nil, nonce, chipertext, nil)
 	if err != nil {
 		fmt.Errorf("Error : ", err.Error())
 		return nil, err

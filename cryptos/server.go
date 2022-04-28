@@ -9,7 +9,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/faizainur/cryptos/cryptos"
+	"github.com/faizainur/hands-on-golang/cryptos/cryptos"
 
 	"google.golang.org/grpc"
 )

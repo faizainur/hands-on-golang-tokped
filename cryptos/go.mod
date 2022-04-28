@@ -1,4 +1,4 @@
-module github.com/faizainur/cryptos
+module github.com/faizainur/hands-on-golang/cryptos
 
 go 1.17
 

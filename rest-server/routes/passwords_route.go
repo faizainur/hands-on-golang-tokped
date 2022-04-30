@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/faizainur/hands-on-golang/rest-server/models"
 	"github.com/faizainur/hands-on-golang/rest-server/services"
 	"github.com/gorilla/mux"
 )
@@ -76,7 +77,7 @@ func (p *PasswordRoutes) ListPasswords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// fmt.Fprintf(w, "%d %d", limit, offset)
-	response, err := p.service.ListPasswords(uint32(limit), uint32(offset))
+	response, count, err := p.service.ListPasswords(uint32(limit), uint32(offset))
 	if err != nil {
 		fmt.Fprintf(w, "%s", err.Error())
 		w.WriteHeader(400)
@@ -84,5 +85,15 @@ func (p *PasswordRoutes) ListPasswords(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(struct {
+		Count  int64             `json:"count"`
+		Limit  uint              `json:"limit"`
+		Offset uint              `json:"offset"`
+		Data   []models.Password `json:"data"`
+	}{
+		Count:  *count,
+		Limit:  uint(limit),
+		Offset: uint(offset),
+		Data:   response,
+	})
 }

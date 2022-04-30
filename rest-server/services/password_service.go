@@ -33,10 +33,11 @@ func (s *PasswordService) AddPassword(name, username, email, password string) (m
 		return pass, err
 	}
 
-	pass.Name = name
-	pass.Username = username
-	pass.Email = email
-	pass.Password = hex.EncodeToString(r.GetData())
+	pass.Name = &name
+	pass.Username = &username
+	pass.Email = &email
+	buf := hex.EncodeToString(r.GetData())
+	pass.Password = &buf
 
 	err = s.db.Create(&pass).Error
 	if err != nil {
@@ -51,12 +52,12 @@ func (s *PasswordService) GetPassword(id uint) (models.Password, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := s.db.Select("id", "name", "username", "email", "password").First(&pass, id).Error
+	err := s.db.Select("id", "name", "username", "email", "password").Where("id = ?", id).Find(&pass).Error
 	if err != nil {
 		return pass, err
 	}
 
-	decodedPass, err := hex.DecodeString(pass.Password)
+	decodedPass, err := hex.DecodeString(*pass.Password)
 	if err != nil {
 		return pass, err
 	}
@@ -68,11 +69,12 @@ func (s *PasswordService) GetPassword(id uint) (models.Password, error) {
 		return pass, err
 	}
 	fmt.Println(r.GetData())
-	pass.Password = string(r.GetData())
+	buf := string(r.GetData())
+	pass.Password = &buf
 	return pass, nil
 }
 
-func (s *PasswordService) ListPasswords(limit, offset uint32) ([]models.Password, error) {
+func (s *PasswordService) ListPasswords(limit, offset uint32) ([]models.Password, *int64, error) {
 	type chanResponse struct {
 		idx int
 		old string
@@ -82,9 +84,16 @@ func (s *PasswordService) ListPasswords(limit, offset uint32) ([]models.Password
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := s.db.Find(&pass).Error
+	err := s.db.Limit(int(limit)).Offset(int(offset)).Find(&pass).Error
 	if err != nil {
-		return pass, err
+		return pass, nil, err
+	}
+	var count int64
+
+	// err = s.db.Table("passwords").Count(&count).Error
+	err = s.db.Model(&models.Password{}).Count(&count).Error
+	if err != nil {
+		return pass, nil, err
 	}
 
 	decryptedPasswordsChannel := make(chan chanResponse, len(pass))
@@ -106,14 +115,14 @@ func (s *PasswordService) ListPasswords(limit, offset uint32) ([]models.Password
 				channel <- chanResponse{idx: idx, old: old, new: "error"}
 			}
 			channel <- chanResponse{idx: idx, old: old, new: string(r.GetData())}
-		}(decryptedPasswordsChannel, idx, val.Password)
+		}(decryptedPasswordsChannel, idx, *val.Password)
 	}
 
 	for i := 0; i < len(pass); i++ {
 		decryptedPasswords := <-decryptedPasswordsChannel
-		pass[decryptedPasswords.idx].Password = decryptedPasswords.new
+		pass[decryptedPasswords.idx].Password = &decryptedPasswords.new
 	}
 
 	// fmt.Println("End of function")
-	return pass, nil
+	return pass, &count, nil
 }

@@ -23,7 +23,7 @@ func main() {
 	key := loadSecret()
 	fmt.Println("Key : ", string(key))
 
-	tcpServer, err := net.Listen("tcp", ":9999")
+	tcpServer, err := net.Listen("tcp", ":6000")
 	if err != nil {
 		fmt.Errorf("Error : ", err.Error())
 	}

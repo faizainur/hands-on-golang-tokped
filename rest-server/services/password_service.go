@@ -52,7 +52,7 @@ func (s *PasswordService) GetPassword(id uint) (models.Password, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := s.db.Select("id", "name", "username", "email", "password").Where("id = ?", id).Find(&pass).Error
+	err := s.db.Select("id", "name", "username", "email", "password").Where("id = ?", id).First(&pass).Error
 	if err != nil {
 		return pass, err
 	}
@@ -99,6 +99,10 @@ func (s *PasswordService) ListPasswords(limit, offset uint32) ([]models.Password
 	decryptedPasswordsChannel := make(chan chanResponse, len(pass))
 	defer close(decryptedPasswordsChannel)
 
+	// Launch goroutines for each record
+	// Each goroutine will make grpc call to crypto service
+	// to decrypt the stored password from database
+	// return -> decrypted password as []byte
 	for idx, val := range pass {
 		go func(channel chan chanResponse, idx int, old string) {
 			// fmt.Println("Decrypting...")
@@ -154,4 +158,12 @@ func (s *PasswordService) UpdatePassword(id uint, password string) (interface{},
 		Id:     id,
 		Status: "success",
 	}, nil
+}
+
+func (s *PasswordService) DeletePassword(id uint) error {
+	err := s.db.Delete(&models.Password{}, id).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }

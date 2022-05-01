@@ -53,8 +53,8 @@ func (p *PasswordRoutes) GetPassword(w http.ResponseWriter, r *http.Request) {
 	response, err := p.service.GetPassword(uint(id))
 	if err != nil {
 		// log.Fatal(err)
-		fmt.Fprintf(w, "%s", err.Error())
 		w.WriteHeader(400)
+		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
@@ -116,4 +116,30 @@ func (p *PasswordRoutes) UpdatePassword(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func (p *PasswordRoutes) DeletePassword(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		fmt.Fprintf(w, "%s", err.Error())
+		w.WriteHeader(400)
+		return
+	}
+	err = p.service.DeletePassword(uint(id))
+	if err != nil {
+		fmt.Fprintf(w, "%s", err.Error())
+		w.WriteHeader(400)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
+		Code   uint   `json:"code,omitempty"`
+		Id     uint   `json:"id,omitempty"`
+		Status string `json:"status,omitempty"`
+	}{
+		Code:   200,
+		Id:     uint(id),
+		Status: "success",
+	})
+
 }

@@ -97,3 +97,23 @@ func (p *PasswordRoutes) ListPasswords(w http.ResponseWriter, r *http.Request) {
 		Data:   response,
 	})
 }
+
+func (p *PasswordRoutes) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		fmt.Fprintf(w, "%s", err.Error())
+		w.WriteHeader(400)
+		return
+	}
+
+	newPassword := mux.Vars(r)["password"]
+	response, err := p.service.UpdatePassword(uint(id), newPassword)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err.Error())
+		w.WriteHeader(400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

@@ -71,6 +71,7 @@ func main() {
 		passwordRouter.HandleFunc("", passwordRoutes.AddPassword).Methods("POST").Queries("username", "{username}", "password", "{password}", "email", "{email}", "name", "{name}")
 		passwordRouter.HandleFunc("", passwordRoutes.ListPasswords).Methods("GET").Queries("limit", "{limit}", "offset", "{offset}")
 		passwordRouter.HandleFunc("/{id}", passwordRoutes.GetPassword).Methods("GET")
+		passwordRouter.HandleFunc("/{id}", passwordRoutes.UpdatePassword).Methods("POST").Queries("password", "{password}")
 	}
 
 	http.Handle("/", r)

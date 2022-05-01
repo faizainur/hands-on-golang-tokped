@@ -126,3 +126,32 @@ func (s *PasswordService) ListPasswords(limit, offset uint32) ([]models.Password
 	// fmt.Println("End of function")
 	return pass, &count, nil
 }
+
+func (s *PasswordService) UpdatePassword(id uint, password string) (interface{}, error) {
+	var pass models.Password
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	newEncryptedPassword, err := s.cryptoClient.EncryptData(ctx, &pb.CryptoRequest{
+		Data: []byte(password),
+		Type: 1,
+	})
+	if err != nil {
+		return pass, err
+	}
+
+	err = s.db.Model(&pass).Where("id = ?", id).Update("password", hex.EncodeToString(newEncryptedPassword.GetData())).Error
+	if err != nil {
+		return pass, err
+	}
+
+	return struct {
+		Code   uint   `json:"code,omitempty"`
+		Id     uint   `json:"id,omitempty"`
+		Status string `json:"status,omitempty"`
+	}{
+		Code:   200,
+		Id:     id,
+		Status: "success",
+	}, nil
+}

@@ -1,5 +1,5 @@
 gql-server/
 temp/
 .vscode/
-dc-envs/ref.rest.env
+dc-envs/rest.env
 log/

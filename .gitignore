@@ -1,5 +1,3 @@
-/gql-server/*
-/temp/*
-/cryptos/temp/*
-/rest-server/temp/*
-/.vscode/*
+gql-server/*
+temp/*
+.vscode/*

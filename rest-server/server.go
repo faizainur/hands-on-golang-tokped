@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
+
 	pb "github.com/faizainur/hands-on-golang/rest-server/cryptos_pb"
 	"github.com/faizainur/hands-on-golang/rest-server/models"
 	"github.com/faizainur/hands-on-golang/rest-server/routes"
@@ -19,26 +21,38 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var (
-	DB_POSTGRES_HOST = "localhost"
-	DB_POSTGRES_PORT = "5432"
-	DB_POSTGRES_USER = os.Getenv("DB_POSTGRES_USER")
-	DB_POSTGRES_PASS = os.Getenv("DB_POSTGRES_PASS")
-	DB_POSTGRES_NAME = os.Getenv("DB_POSTGRES_NAME")
-)
-
 func main() {
-	fmt.Println("Connecting to gRPCs server...")
-	conn, err := grpc.Dial(":6000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// Load .env file for development environment
+	if os.Getenv("ENV") == "development" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	var (
+		DB_POSTGRES_HOST = os.Getenv("DB_POSTGRES_HOST")
+		DB_POSTGRES_PORT = os.Getenv("DB_POSTGRES_PORT")
+		DB_POSTGRES_USER = os.Getenv("DB_POSTGRES_USER")
+		DB_POSTGRES_PASS = os.Getenv("DB_POSTGRES_PASS")
+		DB_POSTGRES_NAME = os.Getenv("DB_POSTGRES_NAME")
+		// SERVER_IP_ADDRESS           = os.Getenv("SERVER_IP_ADDRESS")
+		SERVER_PORT                 = os.Getenv("SERVER_PORT")
+		CRYPTOS_GRPC_SERVER_ADDRESS = os.Getenv("CRYPTOS_GRPC_SERVER_ADDR")
+		CRYPTOS_GRPC_SERVER_PORT    = os.Getenv("CRYPTOS_GRPC_SERVER_PORT")
+	)
+
+	log.Println("Connecting to gRPCs server...")
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", CRYPTOS_GRPC_SERVER_ADDRESS, CRYPTOS_GRPC_SERVER_PORT), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	fmt.Println("Connected to gRPCs server")
+	log.Println("Connected to gRPCs server")
 
 	cryptosGrpcClient := NewCryptosGrpcClient(conn)
 
-	fmt.Println("Connecting to database...")
+	log.Println("Connecting to database...")
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Etc/UTC", DB_POSTGRES_HOST, DB_POSTGRES_USER, DB_POSTGRES_PASS, DB_POSTGRES_NAME, DB_POSTGRES_PORT)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -51,7 +65,7 @@ func main() {
 	r := mux.NewRouter()
 	r.Use(loggingMiddleware)
 
-	// Ping Endpoint : Used for check connection to the server
+	// Ping Endpoint : check connection to the server
 	r.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
@@ -76,7 +90,8 @@ func main() {
 	}
 
 	http.Handle("/", r)
-	http.ListenAndServe(":9000", nil)
+	log.Printf("Listening at :%s\n", SERVER_PORT)
+	http.ListenAndServe(fmt.Sprintf(":%s", SERVER_PORT), nil)
 }
 
 func NewCryptosGrpcClient(conn grpc.ClientConnInterface) pb.CryptosServiceClient {

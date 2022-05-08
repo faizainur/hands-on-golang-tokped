@@ -11,43 +11,67 @@ import (
 
 	"github.com/faizainur/hands-on-golang/cryptos/cryptos"
 
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-const (
-	SECRET_DIR_PATH = "/Users/faiz.rofiq/Documents"
-)
-
 func main() {
-	fmt.Println("Hello World")
-	key := loadSecret()
-	fmt.Println("Key : ", string(key))
 
-	tcpServer, err := net.Listen("tcp", ":6000")
+	if os.Getenv("ENV") == "development" {
+		godotenv.Load()
+	}
+	var (
+		// SERVER_IP_ADDRESS = os.Getenv("SERVER_IP_ADDRESS")
+		SERVER_PORT     = os.Getenv("SERVER_PORT")
+		SECRET_DIR      = os.Getenv("SECRET_DIR")
+		SECRET_FILENAME = os.Getenv("SECRET_FILENAME")
+	)
+
+	// Check if the program able to read the env variables
+	// but the variables is not configured properly
+	if SECRET_DIR == "" || SECRET_FILENAME == "" {
+		log.Fatalf("%s\n", "Error : Please set the env variables properly")
+		return
+	}
+
+	// If path to the secret file is not provided (both env varibles is not configured)
+	// then use the default path
+	// default path = $(PWD)/.tmp-handson-tokped
+	if SECRET_DIR == "" && SECRET_FILENAME == "" {
+		// SECRET_PATH = fmt.Sprintf("%s/%s", GetKeyDirPath(), "master.key")
+		log.Println("Secret file is not provided, using the default key")
+		SECRET_DIR = GetKeyDirPath()
+		SECRET_FILENAME = "master.key"
+	}
+
+	key := loadSecret(SECRET_FILENAME, SECRET_DIR)
+
+	tcpServer, err := net.Listen("tcp", fmt.Sprintf(":%s", SERVER_PORT))
 	if err != nil {
-		fmt.Errorf("Error : ", err.Error())
+		log.Fatalf("Error : %s ", err.Error())
 	}
 	s := grpc.NewServer()
 	cryptos.RegisterGrpcServer(s, &cryptos.Server{Key: key})
 	reflection.Register(s)
-	log.Printf("server listening at %v", tcpServer.Addr())
+	log.Printf("Server listening at %v\n", tcpServer.Addr())
 	if err := s.Serve(tcpServer); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
 
-func loadSecret() []byte {
-	fmt.Println("Loading key...")
+func loadSecret(filename, path string) []byte {
+	log.Printf("Loading key from '%s'\n", fmt.Sprintf("%s/%s", path, filename))
 
 	key := make([]byte, 24)
-	encodedKey, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", SECRET_DIR_PATH, "master.key"))
+	encodedKey, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", path, filename))
 	if err != nil {
-		fmt.Println("Generating new secret file...")
-		key := generateKeyFile()
+		log.Println("Cannot find existing master key...")
+		log.Println("Generating new master key file...")
+		key := generateKeyFile(path, filename)
 		return key
 	}
-	fmt.Println(string(encodedKey))
+	log.Println("Success, key is loaded!")
 	hex.Decode(key, encodedKey)
 	return key
 }
@@ -56,26 +80,42 @@ func generateKey() []byte {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
 	if err != nil {
-		fmt.Errorf("Error : ", err.Error())
+		log.Fatal("Error : ", err.Error())
 	}
 	return key
 }
 
-func generateKeyFile() []byte {
+func generateKeyFile(path, filename string) []byte {
 	generatedKey := generateKey()
 	encodedKey := hex.EncodeToString(generatedKey)
-	fmt.Println(encodedKey)
 
-	out, err := os.Create(fmt.Sprintf("%s/%s", SECRET_DIR_PATH, "master.key"))
+	filePath := fmt.Sprintf("%s/%s", path, "master.key")
+	out, err := os.Create(filePath)
 	if err != nil {
-		fmt.Errorf("Error : ", err.Error())
+		log.Fatal("Error : ", err.Error())
 	}
 	defer out.Close()
 
 	_, err = out.WriteString(encodedKey)
 	if err != nil {
-		fmt.Errorf("Error : ", err.Error())
+		log.Fatal("Error : ", err.Error())
 	}
-	return generatedKey
 
+	log.Printf("File is generated at %s", filePath)
+	return generatedKey
+}
+
+func GetKeyDirPath() string {
+	homeDIr, errHomeDir := os.UserHomeDir()
+	if errHomeDir != nil {
+		log.Fatal(errHomeDir.Error())
+	}
+	dirPath := fmt.Sprintf("%s/%s", homeDIr, ".tmp-handson-tokped")
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err := os.Mkdir(dirPath, os.ModePerm)
+		if err != nil {
+			log.Fatal("Error : ", err)
+		}
+	}
+	return dirPath
 }

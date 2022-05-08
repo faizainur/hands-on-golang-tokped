@@ -1,0 +1,27 @@
+version: "3.9"
+networks:
+  backend:
+    name: "net_backend"
+services:
+  rest-server:
+    build: ./rest-server
+    ports:
+      - 9000:80
+    networks:
+      - backend
+    env_file:
+      - ./dc-envs/rest.env
+  cryptos:
+    build: ./cryptos
+    ports:
+      - 6000:80
+    networks:
+      - backend
+    env_file:
+      - ./dc-envs/cryptos.env
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    networks:
+      - backend

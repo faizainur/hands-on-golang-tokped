@@ -25,3 +25,12 @@ services:
       - 5432:5432
     networks:
       - backend
+
+
+DB_POSTGRES_HOST=postgres
+DB_POSTGRES_PORT=5432
+DB_POSTGRES_USER=postgres
+DB_POSTGRES_PASS=secret
+DB_POSTGRES_NAME=passmg
+CRYPTOS_GRPC_SERVER_ADDRESS=cryptos
+CRYPTOS_GRPC_SERVER_PORT=80

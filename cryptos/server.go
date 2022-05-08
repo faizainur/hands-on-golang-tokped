@@ -12,6 +12,7 @@ import (
 	"github.com/faizainur/hands-on-golang/cryptos/cryptos"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -29,6 +30,7 @@ func main() {
 	}
 	s := grpc.NewServer()
 	cryptos.RegisterGrpcServer(s, &cryptos.Server{Key: key})
+	reflection.Register(s)
 	log.Printf("server listening at %v", tcpServer.Addr())
 	if err := s.Serve(tcpServer); err != nil {
 		log.Fatalf("failed to serve: %v", err)

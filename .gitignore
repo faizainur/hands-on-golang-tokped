@@ -3,3 +3,4 @@ temp/
 .vscode/
 dc-envs/rest.env
 log/
+docker-compose.yml
